@@ -5,15 +5,17 @@ from app.models import CalendarEvent
 from app.date_utils import to_date
 
 EVENT_COLORS = {
-    "conteudo": "#3b82f6",
-    "video": "#8b5cf6",
-    "arte": "#ec4899",
-    "campanha": "#f59e0b",
-    "post": "#3b82f6",
-    "data_importante": "#ef4444",
-    "reuniao": "#f59e0b",
-    "ideia": "#22c55e",
-    "copy": "#6366f1",
+    "post": "#3b82f6",       # Azul
+    "conteudo": "#3b82f6",   # Azul
+    "video": "#8b5cf6",      # Roxo
+    "arte": "#ec4899",       # Rosa
+    "campanha": "#f59e0b",   # Laranja
+    "reuniao": "#eab308",    # Amarelo
+    "data_importante": "#ef4444",  # Vermelho
+    "ideia": "#22c55e",      # Verde
+    "copy": "#6366f1",       # Indigo
+    "story": "#06b6d4",      # Cyan
+    "reels": "#06b6d4",      # Cyan
 }
 
 
