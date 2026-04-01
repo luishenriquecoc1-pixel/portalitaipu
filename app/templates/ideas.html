@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Banco de Ideias - Portal MKT{% endblock %}
+{% block page_title %}Banco de Ideias{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3 flex-1 max-w-md">
+        <div class="relative flex-1">
+            <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="ideas-search" oninput="searchIdeas()" placeholder="Buscar ideias..." class="w-full border border-surface-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+        </div>
+        <select id="ideas-tag-filter" onchange="filterByTag()" class="border border-surface-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+            <option value="">Todas as tags</option>
+            <option value="promocao">Promocao</option>
+            <option value="viral">Viral</option>
+            <option value="institucional">Institucional</option>
+            <option value="educativo">Educativo</option>
+            <option value="sazonal">Sazonal</option>
+            <option value="parceria">Parceria</option>
+        </select>
+    </div>
+    <button onclick="openIdeaModal()" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
+        <i class="bi bi-plus-lg"></i> Nova Ideia
+    </button>
+</div>
+
+<!-- Quick Add -->
+<div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
+    <h4 class="font-bold text-amber-800 mb-3 flex items-center gap-2"><i class="bi bi-lightning-charge-fill"></i> Cadastro Rapido</h4>
+    <form onsubmit="quickAddIdea(event)" class="flex gap-3">
+        <input type="text" id="quick-idea-title" required placeholder="Digite sua ideia..." class="flex-1 border border-amber-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 bg-white">
+        <input type="text" id="quick-idea-tags" placeholder="Tags (virgula)" class="w-48 border border-amber-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 bg-white">
+        <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition">Salvar</button>
+    </form>
+</div>
+
+<div id="ideas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+<!-- Modal -->
+<div id="idea-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+        <div class="p-6 border-b border-surface-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-800">Nova Ideia</h3>
+            <button onclick="closeIdeaModal()" class="p-1 rounded-lg hover:bg-surface-100"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form id="idea-form" onsubmit="saveIdea(event)" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Titulo</label>
+                <input type="text" id="idea-title" required class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descricao</label>
+                <textarea id="idea-description" rows="4" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tags (separadas por virgula)</label>
+                <input type="text" id="idea-tags" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500" placeholder="promocao, viral, institucional">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded-xl text-sm font-medium transition">Salvar</button>
+                <button type="button" onclick="closeIdeaModal()" class="px-6 py-2.5 border border-surface-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-surface-50">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Convert Modal -->
+<div id="convert-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div class="p-6 border-b border-surface-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-800">Transformar em Conteudo</h3>
+            <button onclick="document.getElementById('convert-modal').classList.add('hidden')" class="p-1 rounded-lg hover:bg-surface-100"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form onsubmit="confirmConvert(event)" class="p-6 space-y-4">
+            <input type="hidden" id="convert-idea-id">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de conteudo</label>
+                <select id="convert-type" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                    <option value="post">Post</option>
+                    <option value="video">Video</option>
+                    <option value="story">Story</option>
+                    <option value="reels">Reels</option>
+                    <option value="campanha">Campanha</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                <select id="convert-priority" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                    <option value="baixa">Baixa</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
+                <i class="bi bi-arrow-right-circle"></i> Converter para Conteudo
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const tagColors = { promocao:'bg-green-100 text-green-700', viral:'bg-pink-100 text-pink-700', institucional:'bg-blue-100 text-blue-700', educativo:'bg-purple-100 text-purple-700', sazonal:'bg-amber-100 text-amber-700', parceria:'bg-cyan-100 text-cyan-700' };
+
+function ideaCard(idea) {
+    const tags = idea.tags ? idea.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    return `
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm hover:shadow-md transition p-5 ${idea.is_converted ? 'opacity-60' : ''}">
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex flex-wrap gap-1.5">
+                ${tags.map(t => `<span class="text-[11px] font-medium px-2 py-0.5 rounded-full ${tagColors[t] || 'bg-gray-100 text-gray-600'}">${t}</span>`).join('')}
+            </div>
+            <div class="flex gap-1">
+                ${!idea.is_converted ? `<button onclick="convertIdea(${idea.id})" class="p-1.5 rounded-lg hover:bg-green-50" title="Transformar em conteudo"><i class="bi bi-arrow-right-circle text-green-500 text-sm"></i></button>` : ''}
+                <button onclick="deleteIdea(${idea.id})" class="p-1.5 rounded-lg hover:bg-red-50"><i class="bi bi-trash text-red-400 text-sm"></i></button>
+            </div>
+        </div>
+        <h4 class="font-bold text-gray-800 mb-2">${idea.title}</h4>
+        ${idea.description ? `<p class="text-sm text-gray-500 line-clamp-3">${idea.description}</p>` : ''}
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-surface-100">
+            <span class="text-xs text-gray-400">${idea.creator_name || 'Anonimo'}</span>
+            <span class="text-xs text-gray-400">${new Date(idea.created_at).toLocaleDateString('pt-BR')}</span>
+        </div>
+        ${idea.is_converted ? '<div class="mt-2 text-xs text-green-600 font-medium flex items-center gap-1"><i class="bi bi-check-circle"></i> Convertido em conteudo</div>' : ''}
+    </div>`;
+}
+
+let allIdeas = [];
+async function loadIdeas() {
+    const search = document.getElementById('ideas-search').value;
+    const tag = document.getElementById('ideas-tag-filter').value;
+    let url = '/api/ideas?';
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (tag) url += `tag=${encodeURIComponent(tag)}&`;
+    const res = await fetch(url);
+    allIdeas = await res.json();
+    document.getElementById('ideas-grid').innerHTML = allIdeas.length
+        ? allIdeas.map(ideaCard).join('')
+        : '<div class="col-span-3 text-center py-12 text-gray-400"><i class="bi bi-lightbulb text-4xl block mb-2"></i>Nenhuma ideia encontrada</div>';
+}
+
+function searchIdeas() { clearTimeout(window._searchTimeout); window._searchTimeout = setTimeout(loadIdeas, 300); }
+function filterByTag() { loadIdeas(); }
+
+async function quickAddIdea(e) {
+    e.preventDefault();
+    const title = document.getElementById('quick-idea-title').value;
+    const tags = document.getElementById('quick-idea-tags').value;
+    await fetch('/api/ideas', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ title, tags }) });
+    document.getElementById('quick-idea-title').value = '';
+    document.getElementById('quick-idea-tags').value = '';
+    loadIdeas();
+}
+
+function openIdeaModal() { document.getElementById('idea-form').reset(); document.getElementById('idea-modal').classList.remove('hidden'); }
+function closeIdeaModal() { document.getElementById('idea-modal').classList.add('hidden'); }
+
+async function saveIdea(e) {
+    e.preventDefault();
+    await fetch('/api/ideas', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ title: document.getElementById('idea-title').value, description: document.getElementById('idea-description').value, tags: document.getElementById('idea-tags').value }) });
+    closeIdeaModal(); loadIdeas();
+}
+
+function convertIdea(id) {
+    document.getElementById('convert-idea-id').value = id;
+    document.getElementById('convert-modal').classList.remove('hidden');
+}
+
+async function confirmConvert(e) {
+    e.preventDefault();
+    const id = document.getElementById('convert-idea-id').value;
+    await fetch(`/api/ideas/${id}/convert`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ content_type: document.getElementById('convert-type').value, priority: document.getElementById('convert-priority').value }) });
+    document.getElementById('convert-modal').classList.add('hidden');
+    loadIdeas();
+}
+
+async function deleteIdea(id) { if(!confirm('Excluir esta ideia?'))return; await fetch(`/api/ideas/${id}`,{method:'DELETE'}); loadIdeas(); }
+
+loadIdeas();
+</script>
+{% endblock %}

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal MKT - Painel TV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulseNumber { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+        @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .animate-fadeInUp { animation: fadeInUp 0.6s ease-out both; }
+        .animate-pulseNumber { animation: pulseNumber 0.5s ease-in-out; }
+        .animate-slideIn { animation: slideIn 0.4s ease-out both; }
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.1s; }
+        .stagger-3 { animation-delay: 0.15s; }
+        .stagger-4 { animation-delay: 0.2s; }
+        .kpi-card { transition: all 0.4s ease; }
+        .kpi-card:hover { transform: translateY(-2px); }
+        .data-row { transition: all 0.3s ease; }
+        .data-row:hover { background: rgba(255,255,255,0.05); }
+        .refresh-flash { animation: shimmer 1s ease; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.1), transparent); background-size: 200% 100%; }
+    </style>
+</head>
+<body class="bg-gray-950 text-white antialiased font-sans min-h-screen overflow-hidden">
+
+<!-- Top Bar -->
+<header class="bg-gray-900/80 backdrop-blur-xl border-b border-white/5 px-8 py-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
+                <i class="bi bi-megaphone-fill text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">Portal MKT - Painel de Status</h1>
+                <p class="text-xs text-gray-500 font-medium">Atualizado automaticamente a cada 30 segundos</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="text-right">
+                <p id="tv-date" class="text-sm text-gray-400 font-medium"></p>
+                <p id="tv-time" class="text-2xl font-bold text-white tabular-nums tracking-tight"></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleFullscreen()" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors" title="Tela cheia">
+                    <i class="bi bi-fullscreen text-lg"></i>
+                </button>
+                <a href="/" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors" title="Voltar ao portal">
+                    <i class="bi bi-house text-lg"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="p-6 space-y-5 h-[calc(100vh-80px)] flex flex-col">
+
+    <!-- KPI Row -->
+    <div class="grid grid-cols-4 gap-4 animate-fadeInUp">
+        <div class="kpi-card bg-gradient-to-br from-blue-600/20 to-blue-800/10 border border-blue-500/20 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-blue-300 font-medium">Em Producao</span>
+                <div class="w-9 h-9 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-gear-fill text-blue-400"></i>
+                </div>
+            </div>
+            <p id="kpi-producao" class="text-4xl font-extrabold text-white tabular-nums">0</p>
+        </div>
+        <div class="kpi-card bg-gradient-to-br from-amber-600/20 to-amber-800/10 border border-amber-500/20 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-amber-300 font-medium">Pendente Aprovacao</span>
+                <div class="w-9 h-9 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-hourglass-split text-amber-400"></i>
+                </div>
+            </div>
+            <p id="kpi-aprovacao" class="text-4xl font-extrabold text-white tabular-nums">0</p>
+        </div>
+        <div class="kpi-card bg-gradient-to-br from-purple-600/20 to-purple-800/10 border border-purple-500/20 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-purple-300 font-medium">Artes Pendentes</span>
+                <div class="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-palette-fill text-purple-400"></i>
+                </div>
+            </div>
+            <p id="kpi-artes" class="text-4xl font-extrabold text-white tabular-nums">0</p>
+        </div>
+        <div class="kpi-card bg-gradient-to-br from-emerald-600/20 to-emerald-800/10 border border-emerald-500/20 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-emerald-300 font-medium">Videos em Producao</span>
+                <div class="w-9 h-9 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-camera-video-fill text-emerald-400"></i>
+                </div>
+            </div>
+            <p id="kpi-videos" class="text-4xl font-extrabold text-white tabular-nums">0</p>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 grid grid-cols-3 gap-5 min-h-0">
+
+        <!-- Left: Producao Ativa (2/3) -->
+        <div class="col-span-2 bg-gray-900/60 border border-white/5 rounded-2xl flex flex-col animate-fadeInUp stagger-2">
+            <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                <h2 class="font-bold text-lg flex items-center gap-2">
+                    <i class="bi bi-activity text-brand-400"></i> Producao Ativa
+                </h2>
+                <span id="producao-count" class="text-xs bg-white/10 px-2.5 py-1 rounded-full text-gray-400 font-medium">0 itens</span>
+            </div>
+            <div id="producao-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                <div class="text-center py-10 text-gray-600">
+                    <i class="bi bi-inbox text-3xl block mb-2"></i>
+                    Carregando...
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column (1/3) -->
+        <div class="flex flex-col gap-5">
+            <!-- Agenda de Hoje -->
+            <div class="bg-gray-900/60 border border-white/5 rounded-2xl flex-1 flex flex-col animate-fadeInUp stagger-3">
+                <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                    <h2 class="font-bold text-lg flex items-center gap-2">
+                        <i class="bi bi-calendar3 text-cyan-400"></i> Agenda de Hoje
+                    </h2>
+                </div>
+                <div id="agenda-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                    <div class="text-center py-8 text-gray-600">
+                        <i class="bi bi-calendar-x text-2xl block mb-2"></i>
+                        Carregando...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom: Alertas -->
+    <div class="bg-gray-900/60 border border-red-500/20 rounded-2xl animate-fadeInUp stagger-4">
+        <div class="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+            <h2 class="font-bold flex items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill text-red-400"></i> Alertas
+            </h2>
+            <span id="alert-count" class="text-xs bg-red-500/20 px-2.5 py-1 rounded-full text-red-400 font-medium">0</span>
+        </div>
+        <div id="alerts-list" class="px-5 py-3 flex gap-4 overflow-x-auto">
+            <span class="text-sm text-gray-600">Nenhum alerta</span>
+        </div>
+    </div>
+</div>
+
+<script>
+// Clock
+function updateClock() {
+    const now = new Date();
+    document.getElementById('tv-date').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('tv-time').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Priority colors
+const priorityColors = {
+    urgente: 'bg-red-500/20 text-red-400 border-red-500/30',
+    alta: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    media: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    baixa: 'bg-green-500/20 text-green-400 border-green-500/30'
+};
+
+const typeIcons = {
+    post: 'bi-file-richtext',
+    video: 'bi-camera-video',
+    story: 'bi-phone',
+    reels: 'bi-play-circle',
+    campanha: 'bi-megaphone',
+    carousel: 'bi-collection'
+};
+
+// Animate KPI number
+function animateKPI(el, newVal) {
+    const current = parseInt(el.textContent) || 0;
+    if (current !== newVal) {
+        el.textContent = newVal;
+        el.classList.remove('animate-pulseNumber');
+        void el.offsetWidth;
+        el.classList.add('animate-pulseNumber');
+    }
+}
+
+// Fetch all data
+async function refreshData() {
+    try {
+        const [contentsRes, artsRes, videosRes, alertsRes, calendarRes] = await Promise.all([
+            fetch('/api/contents').then(r => r.json()).catch(() => []),
+            fetch('/api/arts').then(r => r.json()).catch(() => []),
+            fetch('/api/videos').then(r => r.json()).catch(() => []),
+            fetch('/api/alerts').then(r => r.json()).catch(() => []),
+            fetch(`/api/calendar?month=${new Date().getMonth()+1}&year=${new Date().getFullYear()}`).then(r => r.json()).catch(() => [])
+        ]);
+
+        // KPIs
+        const producao = contentsRes.filter(c => c.status === 'producao' || c.status === 'em_producao');
+        const aprovacao = contentsRes.filter(c => c.status === 'aprovacao' || c.status === 'pendente_aprovacao' || c.status === 'revisao');
+        const artesPendentes = Array.isArray(artsRes) ? artsRes.filter(a => a.status === 'pendente' || a.status === 'em_producao' || a.status === 'producao') : [];
+        const videosProducao = Array.isArray(videosRes) ? videosRes.filter(v => v.status === 'producao' || v.status === 'em_producao' || v.status === 'gravacao' || v.status === 'edicao') : [];
+
+        animateKPI(document.getElementById('kpi-producao'), producao.length);
+        animateKPI(document.getElementById('kpi-aprovacao'), aprovacao.length);
+        animateKPI(document.getElementById('kpi-artes'), artesPendentes.length);
+        animateKPI(document.getElementById('kpi-videos'), videosProducao.length);
+
+        // Producao Ativa list
+        const activeItems = contentsRes.filter(c =>
+            c.status === 'producao' || c.status === 'em_producao' ||
+            c.status === 'aprovacao' || c.status === 'pendente_aprovacao' ||
+            c.status === 'revisao' || c.status === 'criacao'
+        );
+        const producaoEl = document.getElementById('producao-list');
+        document.getElementById('producao-count').textContent = `${activeItems.length} itens`;
+
+        if (activeItems.length === 0) {
+            producaoEl.innerHTML = `<div class="text-center py-10 text-gray-600"><i class="bi bi-check-circle text-3xl block mb-2"></i>Nenhum item em producao</div>`;
+        } else {
+            producaoEl.innerHTML = activeItems.map((item, i) => `
+                <div class="data-row flex items-center gap-4 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 animate-slideIn" style="animation-delay:${i*0.03}s">
+                    <div class="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center flex-shrink-0">
+                        <i class="bi ${typeIcons[item.type] || 'bi-file-text'} text-brand-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm truncate">${item.title}</p>
+                        <p class="text-xs text-gray-500">${item.type || ''} ${item.responsible ? '&middot; ' + item.responsible : ''}</p>
+                    </div>
+                    <span class="text-[11px] font-medium px-2.5 py-1 rounded-full border ${priorityColors[item.priority] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}">
+                        ${item.priority || 'media'}
+                    </span>
+                    <span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/5 text-gray-400">
+                        ${item.status}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // Agenda de Hoje
+        const today = new Date().toISOString().split('T')[0];
+        const todayEvents = Array.isArray(calendarRes) ? calendarRes.filter(ev => {
+            const evDate = (ev.date || ev.start_date || '').split('T')[0];
+            return evDate === today;
+        }) : [];
+        const agendaEl = document.getElementById('agenda-list');
+
+        if (todayEvents.length === 0) {
+            agendaEl.innerHTML = `<div class="text-center py-8 text-gray-600"><i class="bi bi-calendar-check text-2xl block mb-2"></i>Sem eventos hoje</div>`;
+        } else {
+            agendaEl.innerHTML = todayEvents.map((ev, i) => {
+                const time = ev.time || (ev.date || '').split('T')[1]?.substring(0,5) || '';
+                return `
+                <div class="data-row flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/5 animate-slideIn" style="animation-delay:${i*0.05}s">
+                    ${time ? `<span class="text-xs font-bold text-cyan-400 w-12 flex-shrink-0 tabular-nums">${time}</span>` : ''}
+                    <span class="text-sm truncate">${ev.title || ev.name || 'Evento'}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // Alertas
+        const dangerAlerts = Array.isArray(alertsRes) ? alertsRes.filter(a => a.type === 'danger' || a.type === 'overdue') : [];
+        const alertsEl = document.getElementById('alerts-list');
+        document.getElementById('alert-count').textContent = dangerAlerts.length;
+
+        if (dangerAlerts.length === 0) {
+            alertsEl.innerHTML = `<span class="text-sm text-gray-600">Nenhum alerta no momento</span>`;
+        } else {
+            alertsEl.innerHTML = dangerAlerts.map(a => `
+                <div class="flex-shrink-0 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
+                    <i class="bi bi-exclamation-circle-fill text-red-400"></i>
+                    <span class="text-sm text-red-300 whitespace-nowrap">${a.message || a.title || 'Alerta'}</span>
+                </div>
+            `).join('');
+        }
+
+    } catch(err) {
+        console.error('Erro ao atualizar dados:', err);
+    }
+}
+
+// Fullscreen
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+}
+
+// ESC key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+        } else {
+            window.location.href = '/';
+        }
+    }
+});
+
+// Initial load + auto-refresh
+refreshData();
+setInterval(refreshData, 30000);
+</script>
+</body>
+</html>

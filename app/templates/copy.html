@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Gerador de Copy - Portal MKT{% endblock %}
+{% block page_title %}Gerador de Copy e Roteiros{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Input Panel -->
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-6 card-hover animate-fadeInUp">
+        <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="bi bi-sliders text-brand-500"></i> Configuracoes
+        </h3>
+        <form id="copy-form" onsubmit="generateCopy(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Objetivo</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <label class="flex items-center gap-2 p-3 rounded-xl border border-surface-200 cursor-pointer hover:bg-surface-50 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-300 transition-all">
+                        <input type="radio" name="objective" value="venda" checked class="text-brand-500">
+                        <span class="text-sm"><i class="bi bi-cart"></i> Venda</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-3 rounded-xl border border-surface-200 cursor-pointer hover:bg-surface-50 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-300 transition-all">
+                        <input type="radio" name="objective" value="branding" class="text-brand-500">
+                        <span class="text-sm"><i class="bi bi-heart"></i> Branding</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-3 rounded-xl border border-surface-200 cursor-pointer hover:bg-surface-50 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-300 transition-all">
+                        <input type="radio" name="objective" value="engajamento" class="text-brand-500">
+                        <span class="text-sm"><i class="bi bi-chat-dots"></i> Engajar</span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Publico-alvo</label>
+                <input type="text" id="copy-audience" value="publico geral" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all" placeholder="Ex: jovens de 18-25, familias, empresas">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Produto</label>
+                <select id="copy-product" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 transition-all">
+                    {% for p in products %}<option value="{{ p }}">{{ p|title }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tom de voz</label>
+                <div class="grid grid-cols-5 gap-1.5">
+                    {% set tone_icons = {'engraçado': 'bi-emoji-laughing', 'direto': 'bi-bullseye', 'emocional': 'bi-heart', 'profissional': 'bi-briefcase', 'urgente': 'bi-lightning'} %}
+                    {% for t in tones %}
+                    <label class="flex flex-col items-center p-2.5 rounded-xl border border-surface-200 cursor-pointer hover:bg-surface-50 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-300 text-center transition-all">
+                        <input type="radio" name="tone" value="{{ t }}" {% if t == 'direto' %}checked{% endif %} class="text-brand-500 mb-1 sr-only">
+                        <i class="bi {{ tone_icons.get(t, 'bi-chat') }} text-lg mb-0.5"></i>
+                        <span class="text-[10px] font-medium leading-tight">{{ t|title }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button type="submit" id="generate-btn" class="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40 hover:-translate-y-0.5 btn-ripple">
+                <i class="bi bi-magic"></i> Gerar Conteudo
+            </button>
+
+            <button type="button" onclick="generateCopy(event)" class="w-full bg-white border border-surface-200 text-gray-600 hover:bg-surface-50 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2">
+                <i class="bi bi-arrow-repeat"></i> Gerar Variacao
+            </button>
+        </form>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="lg:col-span-2 space-y-4">
+        <div id="output-placeholder" class="bg-white rounded-2xl border border-surface-200 shadow-sm p-12 text-center animate-fadeInUp stagger-2">
+            <div class="w-20 h-20 bg-gradient-to-br from-brand-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="bi bi-pencil-square text-4xl text-brand-400"></i>
+            </div>
+            <p class="text-gray-500 font-medium">Configure os parametros e clique em "Gerar Conteudo"</p>
+            <p class="text-sm text-gray-300 mt-1">5 tons de voz, 8 produtos, roteiros prontos para uso</p>
+        </div>
+
+        <div id="output-results" class="hidden space-y-4">
+            <!-- Video Script -->
+            <div class="bg-white rounded-2xl border border-surface-200 shadow-sm overflow-hidden card-hover animate-fadeInUp">
+                <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between">
+                    <h4 class="font-bold text-blue-700 flex items-center gap-2"><i class="bi bi-camera-video"></i> Roteiro de Video</h4>
+                    <div class="flex gap-2">
+                        <button onclick="sendToProduction('video', 'video-script-output')" class="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1 bg-white px-3 py-1 rounded-lg border border-brand-200 hover:bg-brand-50 transition-all"><i class="bi bi-arrow-right-circle"></i> Enviar p/ Producao</button>
+                        <button onclick="copyToClipboard('video-script-output')" class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"><i class="bi bi-clipboard"></i> Copiar</button>
+                    </div>
+                </div>
+                <div class="p-5"><pre id="video-script-output" class="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed"></pre></div>
+            </div>
+
+            <!-- Post Copy -->
+            <div class="bg-white rounded-2xl border border-surface-200 shadow-sm overflow-hidden card-hover animate-fadeInUp stagger-1">
+                <div class="p-4 bg-gradient-to-r from-pink-50 to-rose-50 border-b border-pink-100 flex items-center justify-between">
+                    <h4 class="font-bold text-pink-700 flex items-center gap-2"><i class="bi bi-file-text"></i> Copy para Post</h4>
+                    <div class="flex gap-2">
+                        <button onclick="sendToProduction('post', 'post-copy-output')" class="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1 bg-white px-3 py-1 rounded-lg border border-brand-200 hover:bg-brand-50 transition-all"><i class="bi bi-arrow-right-circle"></i> Enviar p/ Producao</button>
+                        <button onclick="copyToClipboard('post-copy-output')" class="text-sm text-pink-600 hover:text-pink-800 flex items-center gap-1"><i class="bi bi-clipboard"></i> Copiar</button>
+                    </div>
+                </div>
+                <div class="p-5"><pre id="post-copy-output" class="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed"></pre></div>
+            </div>
+
+            <!-- Story/Reels Copy -->
+            <div class="bg-white rounded-2xl border border-surface-200 shadow-sm overflow-hidden card-hover animate-fadeInUp stagger-2">
+                <div class="p-4 bg-gradient-to-r from-violet-50 to-purple-50 border-b border-violet-100 flex items-center justify-between">
+                    <h4 class="font-bold text-violet-700 flex items-center gap-2"><i class="bi bi-phone"></i> Copy para Story/Reels</h4>
+                    <div class="flex gap-2">
+                        <button onclick="sendToProduction('story', 'story-copy-output')" class="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1 bg-white px-3 py-1 rounded-lg border border-brand-200 hover:bg-brand-50 transition-all"><i class="bi bi-arrow-right-circle"></i> Enviar p/ Producao</button>
+                        <button onclick="copyToClipboard('story-copy-output')" class="text-sm text-violet-600 hover:text-violet-800 flex items-center gap-1"><i class="bi bi-clipboard"></i> Copiar</button>
+                    </div>
+                </div>
+                <div class="p-5"><pre id="story-copy-output" class="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed"></pre></div>
+            </div>
+
+            <!-- Ad Text -->
+            <div class="bg-white rounded-2xl border border-surface-200 shadow-sm overflow-hidden card-hover animate-fadeInUp stagger-3">
+                <div class="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 flex items-center justify-between">
+                    <h4 class="font-bold text-amber-700 flex items-center gap-2"><i class="bi bi-megaphone"></i> Texto para Anuncio</h4>
+                    <div class="flex gap-2">
+                        <button onclick="sendToProduction('post', 'ad-text-output')" class="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1 bg-white px-3 py-1 rounded-lg border border-brand-200 hover:bg-brand-50 transition-all"><i class="bi bi-arrow-right-circle"></i> Enviar p/ Producao</button>
+                        <button onclick="copyToClipboard('ad-text-output')" class="text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1"><i class="bi bi-clipboard"></i> Copiar</button>
+                    </div>
+                </div>
+                <div class="p-5"><pre id="ad-text-output" class="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed"></pre></div>
+            </div>
+
+            <!-- CTA -->
+            <div class="bg-gradient-to-r from-brand-500 via-purple-500 to-brand-600 rounded-2xl p-6 text-white shadow-lg shadow-brand-500/20 animate-fadeInUp stagger-4">
+                <h4 class="font-bold flex items-center gap-2 mb-2"><i class="bi bi-cursor"></i> CTA Sugerido</h4>
+                <p id="cta-output" class="text-lg font-medium"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Enviar para Producao -->
+<div id="production-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scaleIn">
+        <div class="p-6 border-b border-surface-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i class="bi bi-arrow-right-circle text-brand-500"></i> Enviar para Producao</h3>
+            <button onclick="closeProductionModal()" class="p-1 rounded-lg hover:bg-surface-100 transition-colors"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form onsubmit="confirmSendToProduction(event)" class="p-6 space-y-4">
+            <input type="hidden" id="prod-copy-text">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Titulo do conteudo</label>
+                <input type="text" id="prod-title" required class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                    <select id="prod-type" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                        <option value="post">Post</option>
+                        <option value="video">Video</option>
+                        <option value="story">Story</option>
+                        <option value="reels">Reels</option>
+                        <option value="spot">Spot</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                    <select id="prod-priority" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                        <option value="baixa">Baixa</option>
+                        <option value="media" selected>Media</option>
+                        <option value="alta">Alta</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Data de publicacao</label>
+                <input type="date" id="prod-date" required class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+            </div>
+            <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 btn-ripple">
+                <i class="bi bi-check-circle"></i> Criar Conteudo + Agendar no Calendario
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function generateCopy(e) {
+    e.preventDefault();
+    const btn = document.getElementById('generate-btn');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> Gerando...';
+    btn.disabled = true;
+
+    const objective = document.querySelector('input[name="objective"]:checked').value;
+    const audience = document.getElementById('copy-audience').value;
+    const product = document.getElementById('copy-product').value;
+    const tone = document.querySelector('input[name="tone"]:checked').value;
+
+    try {
+        const res = await fetch('/api/copy/generate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ objective, audience, product, tone })
+        });
+        const data = await res.json();
+
+        document.getElementById('video-script-output').textContent = data.video_script;
+        document.getElementById('post-copy-output').textContent = data.post_copy;
+        document.getElementById('story-copy-output').textContent = data.story_copy || '';
+        document.getElementById('ad-text-output').textContent = data.ad_text;
+        document.getElementById('cta-output').textContent = data.cta;
+
+        document.getElementById('output-placeholder').classList.add('hidden');
+        document.getElementById('output-results').classList.remove('hidden');
+    } catch (err) {
+        alert('Erro ao gerar conteudo');
+    }
+
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+}
+
+function copyToClipboard(elementId) {
+    const text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Copiado para a area de transferencia!', 'success');
+    });
+}
+
+function sendToProduction(defaultType, textElementId) {
+    const text = document.getElementById(textElementId).textContent;
+    document.getElementById('prod-copy-text').value = text;
+    document.getElementById('prod-type').value = defaultType;
+    document.getElementById('prod-title').value = '';
+    document.getElementById('prod-date').value = '';
+    document.getElementById('production-modal').classList.remove('hidden');
+}
+
+function closeProductionModal() {
+    document.getElementById('production-modal').classList.add('hidden');
+}
+
+async function confirmSendToProduction(e) {
+    e.preventDefault();
+    const body = {
+        title: document.getElementById('prod-title').value,
+        description: document.getElementById('prod-copy-text').value,
+        content_type: document.getElementById('prod-type').value,
+        priority: document.getElementById('prod-priority').value,
+        due_date: document.getElementById('prod-date').value,
+        copy_text: document.getElementById('prod-copy-text').value,
+    };
+
+    const res = await fetch('/api/copy/to-production', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (data.content_id) {
+        closeProductionModal();
+        showToast('Conteudo criado e agendado no calendario!', 'success');
+    } else {
+        showToast('Erro ao criar conteudo', 'error');
+    }
+}
+</script>
+{% endblock %}

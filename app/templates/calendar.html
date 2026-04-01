@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Calendario de Marketing - Portal MKT{% endblock %}
+{% block page_title %}Calendario de Marketing{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4 animate-fadeInUp">
+    <div class="flex items-center gap-3">
+        <button onclick="changeMonth(-1)" class="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-gray-800 border border-surface-200 dark:border-gray-700 transition-all"><i class="bi bi-chevron-left"></i></button>
+        <h3 id="calendar-title" class="text-xl font-bold text-gray-800 dark:text-white min-w-[220px] text-center"></h3>
+        <button onclick="changeMonth(1)" class="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-gray-800 border border-surface-200 dark:border-gray-700 transition-all"><i class="bi bi-chevron-right"></i></button>
+        <button onclick="goToday()" class="px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-800 border border-surface-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-surface-50 transition-all">Hoje</button>
+        <div class="flex bg-surface-100 dark:bg-gray-800 rounded-xl p-0.5 ml-2">
+            <button onclick="setView('month')" id="btn-month" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm transition-all">Mes</button>
+            <button onclick="setView('week')" id="btn-week" class="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-all">Semana</button>
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+        <button onclick="duplicateWeek()" id="btn-dup-week" class="hidden px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-800 border border-surface-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-surface-50 transition-all" title="Duplicar semana para a proxima">
+            <i class="bi bi-copy"></i> Duplicar Semana
+        </button>
+        <button onclick="openEventModal()" class="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-brand-500/20 btn-ripple">
+            <i class="bi bi-plus-lg"></i> Novo Evento
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="flex flex-wrap items-center gap-2 mb-4 animate-fadeInUp stagger-1">
+    <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Filtrar:</span>
+    <button onclick="toggleFilter('all')" class="cal-filter active text-xs px-3 py-1 rounded-full border transition-all" data-f="all">Todos</button>
+    <button onclick="toggleFilter('conteudo')" class="cal-filter text-xs px-3 py-1 rounded-full border border-blue-200 text-blue-600 hover:bg-blue-50 transition-all" data-f="conteudo"><i class="bi bi-file-text"></i> Conteudo</button>
+    <button onclick="toggleFilter('video')" class="cal-filter text-xs px-3 py-1 rounded-full border border-purple-200 text-purple-600 hover:bg-purple-50 transition-all" data-f="video"><i class="bi bi-camera-video"></i> Video</button>
+    <button onclick="toggleFilter('arte')" class="cal-filter text-xs px-3 py-1 rounded-full border border-pink-200 text-pink-600 hover:bg-pink-50 transition-all" data-f="arte"><i class="bi bi-palette"></i> Arte</button>
+    <button onclick="toggleFilter('campanha')" class="cal-filter text-xs px-3 py-1 rounded-full border border-amber-200 text-amber-600 hover:bg-amber-50 transition-all" data-f="campanha"><i class="bi bi-megaphone"></i> Campanha</button>
+    <button onclick="toggleFilter('reuniao')" class="cal-filter text-xs px-3 py-1 rounded-full border border-yellow-200 text-yellow-600 hover:bg-yellow-50 transition-all" data-f="reuniao"><i class="bi bi-people"></i> Reuniao</button>
+    <button onclick="toggleFilter('manual')" class="cal-filter text-xs px-3 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all" data-f="manual"><i class="bi bi-hand-index"></i> Manual</button>
+    <span class="ml-auto text-xs text-gray-400 italic"><i class="bi bi-arrows-move"></i> Arraste para mover</span>
+</div>
+
+<!-- Month View -->
+<div id="month-view" class="bg-white dark:bg-gray-900 rounded-2xl border border-surface-200 dark:border-gray-800 shadow-sm overflow-hidden animate-fadeInUp stagger-2">
+    <div class="grid grid-cols-7 border-b border-surface-200 dark:border-gray-800 bg-surface-50 dark:bg-gray-800">
+        <div class="p-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dom</div>
+        <div class="p-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Seg</div>
+        <div class="p-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ter</div>
+        <div class="p-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qua</div>
+        <div class="p-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qui</div>
+        <div class="p-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sex</div>
+        <div class="p-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sab</div>
+    </div>
+    <div id="calendar-grid" class="grid grid-cols-7"></div>
+</div>
+
+<!-- Week View -->
+<div id="week-view" class="hidden bg-white dark:bg-gray-900 rounded-2xl border border-surface-200 dark:border-gray-800 shadow-sm overflow-hidden animate-fadeInUp">
+    <div id="week-header" class="grid grid-cols-7 border-b border-surface-200 dark:border-gray-800 bg-surface-50 dark:bg-gray-800"></div>
+    <div id="week-grid" class="grid grid-cols-7 min-h-[500px]"></div>
+</div>
+
+<!-- Event Modal -->
+<div id="event-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-scaleIn border dark:border-gray-700">
+        <div class="p-6 border-b border-surface-100 dark:border-gray-700 flex items-center justify-between">
+            <h3 id="event-modal-title" class="text-lg font-bold text-gray-800 dark:text-white">Novo Evento</h3>
+            <button onclick="closeEventModal()" class="p-1 rounded-lg hover:bg-surface-100 dark:hover:bg-gray-800 transition-colors"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form id="event-form" onsubmit="saveEvent(event)" class="p-6 space-y-4">
+            <input type="hidden" id="event-id" value="">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Titulo</label>
+                <input type="text" id="event-title" required class="w-full border border-surface-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+                    <select id="event-type" class="w-full border border-surface-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                        {% for t in event_types %}<option value="{{ t }}">{{ t|replace('_',' ')|title }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cor</label>
+                    <input type="color" id="event-color" value="#6366f1" class="w-full h-[42px] border border-surface-200 dark:border-gray-700 rounded-xl cursor-pointer">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data</label>
+                    <input type="date" id="event-date" required class="w-full border border-surface-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Horario <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <input type="time" id="event-time" class="w-full border border-surface-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descricao</label>
+                <textarea id="event-description" rows="3" class="w-full border border-surface-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 transition-all"></textarea>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 bg-gradient-to-r from-brand-500 to-brand-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-all btn-ripple">Salvar</button>
+                <button type="button" id="btn-delete-event" onclick="deleteEvent()" class="hidden px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium hover:bg-red-100 transition-all">Excluir</button>
+                <button type="button" onclick="closeEventModal()" class="px-6 py-2.5 border border-surface-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-surface-50 dark:hover:bg-gray-800 transition-all">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentYear, currentMonth, allEvents = [], currentView = 'month', activeFilter = 'all', currentWeekStart = null;
+let draggedEventId = null;
+const monthNames = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+const eventColors = { post:'#3b82f6', campanha:'#8b5cf6', data_importante:'#ef4444', reuniao:'#f59e0b', video:'#8b5cf6', arte:'#ec4899', conteudo:'#3b82f6', ideia:'#22c55e', copy:'#6366f1' };
+
+function init() { const now = new Date(); currentYear = now.getFullYear(); currentMonth = now.getMonth(); currentWeekStart = getWeekStart(now); render(); }
+
+function getWeekStart(d) { const dt = new Date(d); dt.setDate(dt.getDate() - dt.getDay()); return dt; }
+
+function changeMonth(delta) {
+    if (currentView === 'week') { currentWeekStart.setDate(currentWeekStart.getDate() + delta * 7); currentMonth = currentWeekStart.getMonth(); currentYear = currentWeekStart.getFullYear(); }
+    else { currentMonth += delta; if (currentMonth > 11) { currentMonth = 0; currentYear++; } if (currentMonth < 0) { currentMonth = 11; currentYear--; } }
+    render();
+}
+function goToday() { const now = new Date(); currentYear = now.getFullYear(); currentMonth = now.getMonth(); currentWeekStart = getWeekStart(now); render(); }
+
+function setView(v) {
+    currentView = v;
+    document.getElementById('btn-month').className = v === 'month' ? 'px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm transition-all' : 'px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-all';
+    document.getElementById('btn-week').className = v === 'week' ? 'px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm transition-all' : 'px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-all';
+    document.getElementById('month-view').classList.toggle('hidden', v !== 'month');
+    document.getElementById('week-view').classList.toggle('hidden', v !== 'week');
+    document.getElementById('btn-dup-week').classList.toggle('hidden', v !== 'week');
+    render();
+}
+
+function toggleFilter(f) {
+    activeFilter = f;
+    document.querySelectorAll('.cal-filter').forEach(b => { b.classList.toggle('active', b.dataset.f === f); b.classList.toggle('bg-brand-500', b.dataset.f === f); b.classList.toggle('text-white', b.dataset.f === f); b.classList.toggle('border-brand-500', b.dataset.f === f); });
+    render();
+}
+
+function filterEvents(events) {
+    if (activeFilter === 'all') return events;
+    if (activeFilter === 'manual') return events.filter(e => e.source === 'manual');
+    return events.filter(e => e.event_type === activeFilter || e.source === activeFilter);
+}
+
+async function render() { const res = await fetch(`/api/calendar?month=${currentMonth+1}&year=${currentYear}`); allEvents = await res.json(); currentView === 'month' ? renderMonth() : renderWeek(); }
+
+function eventHtml(e) {
+    const t = e.time ? `<span class="opacity-80 mr-0.5">${e.time}</span>` : '';
+    const src = e.source !== 'manual' ? '<i class="bi bi-link-45deg text-[9px] opacity-60"></i>' : '';
+    return `<div class="cal-event text-[11px] px-1.5 py-0.5 rounded truncate text-white font-medium cursor-grab select-none flex items-center gap-0.5" style="background-color:${e.color || eventColors[e.event_type] || '#6366f1'}" draggable="true" ondragstart="startDrag(event,${e.id})" ondragend="endDrag(event)" onclick="event.stopPropagation();editEvent(${e.id})" title="${e.time?e.time+' - ':''}${e.title}">${t}${src}${e.title}</div>`;
+}
+
+function dayCell(dateStr, day, isToday, isOtherMonth) {
+    const dayEvents = filterEvents(allEvents.filter(e => e.date === dateStr));
+    return `<div class="min-h-[100px] p-1.5 border-b border-r border-surface-100 dark:border-gray-800 ${isOtherMonth?'bg-surface-50/50 dark:bg-gray-950/50':'hover:bg-brand-50/30 dark:hover:bg-brand-900/10'} transition-colors calendar-day" data-date="${dateStr}" ondragover="event.preventDefault();this.classList.add('bg-brand-100/50','ring-2','ring-brand-300','ring-inset')" ondragleave="this.classList.remove('bg-brand-100/50','ring-2','ring-brand-300','ring-inset')" ondrop="handleDrop(event,'${dateStr}')" onclick="openEventModalForDate('${dateStr}')">
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold ${isToday?'bg-brand-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm':'text-gray-600 dark:text-gray-400'} ${isOtherMonth?'opacity-40':''}">${day}</span>
+            ${dayEvents.length>0?`<span class="text-[9px] font-medium text-gray-400 bg-surface-100 dark:bg-gray-800 px-1 rounded-full">${dayEvents.length}</span>`:''}
+        </div>
+        <div class="space-y-0.5">${dayEvents.slice(0,3).map(eventHtml).join('')}${dayEvents.length>3?`<div class="text-[9px] text-gray-400 pl-1">+${dayEvents.length-3}</div>`:''}</div>
+    </div>`;
+}
+
+function renderMonth() {
+    document.getElementById('calendar-title').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const today = new Date(); const isCurrentMonth = today.getFullYear()===currentYear && today.getMonth()===currentMonth;
+
+    let html = '';
+    for (let i = 0; i < firstDay; i++) { const d = new Date(currentYear, currentMonth, -firstDay+i+1); html += dayCell(d.toISOString().split('T')[0], d.getDate(), false, true); }
+    for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; html += dayCell(dateStr, day, isCurrentMonth && today.getDate()===day, false); }
+    const total = firstDay + daysInMonth; const rem = total%7===0?0:7-(total%7);
+    for (let i = 1; i <= rem; i++) { const d = new Date(currentYear, currentMonth+1, i); html += dayCell(d.toISOString().split('T')[0], i, false, true); }
+    document.getElementById('calendar-grid').innerHTML = html;
+}
+
+function renderWeek() {
+    const ws = new Date(currentWeekStart);
+    const we = new Date(ws); we.setDate(we.getDate()+6);
+    document.getElementById('calendar-title').textContent = `${ws.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} - ${we.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})}`;
+
+    const today = new Date();
+    let headerHtml = '', gridHtml = '';
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(ws); d.setDate(d.getDate()+i);
+        const dateStr = d.toISOString().split('T')[0];
+        const isToday = d.toDateString() === today.toDateString();
+        headerHtml += `<div class="p-3 text-center border-r border-surface-200 dark:border-gray-800 ${isToday?'bg-brand-50 dark:bg-brand-900/20':''}"><span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">${dayNames[i]}</span><br><span class="text-lg font-bold ${isToday?'text-brand-600 dark:text-brand-400':'text-gray-800 dark:text-white'}">${d.getDate()}</span></div>`;
+
+        const dayEvts = filterEvents(allEvents.filter(e => e.date === dateStr));
+        const sorted = [...dayEvts].sort((a,b) => (a.time||'99:99').localeCompare(b.time||'99:99'));
+        gridHtml += `<div class="p-2 border-r border-b border-surface-100 dark:border-gray-800 min-h-[400px] ${isToday?'bg-brand-50/30 dark:bg-brand-900/10':''} calendar-day" data-date="${dateStr}" ondragover="event.preventDefault();this.classList.add('bg-brand-100/50','ring-2','ring-brand-300','ring-inset')" ondragleave="this.classList.remove('bg-brand-100/50','ring-2','ring-brand-300','ring-inset')" ondrop="handleDrop(event,'${dateStr}')" onclick="openEventModalForDate('${dateStr}')">
+            <div class="space-y-1">${sorted.map(e => {
+                const t = e.time ? `<span class="font-bold">${e.time}</span> ` : '<span class="text-gray-400">Dia todo</span> ';
+                return `<div class="text-xs p-2 rounded-lg text-white cursor-grab" style="background-color:${e.color||'#6366f1'}" draggable="true" ondragstart="startDrag(event,${e.id})" ondragend="endDrag(event)" onclick="event.stopPropagation();editEvent(${e.id})">${t}${e.title}</div>`;
+            }).join('')}</div>
+        </div>`;
+    }
+    document.getElementById('week-header').innerHTML = headerHtml;
+    document.getElementById('week-grid').innerHTML = gridHtml;
+}
+
+// Drag & Drop
+function startDrag(e, id) { draggedEventId = id; e.dataTransfer.effectAllowed = 'move'; e.target.style.opacity = '0.4'; }
+function endDrag(e) { e.target.style.opacity = ''; document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('bg-brand-100/50','ring-2','ring-brand-300','ring-inset')); }
+async function handleDrop(e, newDate) {
+    e.preventDefault(); e.currentTarget.classList.remove('bg-brand-100/50','ring-2','ring-brand-300','ring-inset');
+    if (!draggedEventId) return;
+    await fetch(`/api/calendar/${draggedEventId}/move`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date:newDate}) });
+    draggedEventId = null; render(); showToast('Evento movido!','success');
+}
+
+// Duplicate week
+async function duplicateWeek() {
+    const ws = new Date(currentWeekStart);
+    const nextWs = new Date(ws); nextWs.setDate(nextWs.getDate()+7);
+    const weekEvents = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(ws); d.setDate(d.getDate()+i);
+        const dateStr = d.toISOString().split('T')[0];
+        allEvents.filter(e => e.date === dateStr).forEach(e => weekEvents.push({...e, dayOffset: i}));
+    }
+    if (weekEvents.length === 0) { showToast('Nenhum evento nesta semana','warning'); return; }
+    if (!confirm(`Duplicar ${weekEvents.length} evento(s) para a proxima semana?`)) return;
+    for (const e of weekEvents) {
+        const nd = new Date(nextWs); nd.setDate(nd.getDate()+e.dayOffset);
+        await fetch('/api/calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:e.title, event_type:e.event_type, date:nd.toISOString().split('T')[0], time:e.time, description:e.description, color:e.color}) });
+    }
+    render(); showToast(`${weekEvents.length} evento(s) duplicados!`,'success');
+}
+
+// Modal
+function openEventModal() { document.getElementById('event-modal-title').textContent='Novo Evento'; document.getElementById('event-form').reset(); document.getElementById('event-id').value=''; document.getElementById('btn-delete-event').classList.add('hidden'); document.getElementById('event-modal').classList.remove('hidden'); }
+function openEventModalForDate(d) { openEventModal(); document.getElementById('event-date').value = d; }
+function closeEventModal() { document.getElementById('event-modal').classList.add('hidden'); }
+
+function editEvent(id) {
+    const e = allEvents.find(ev => ev.id === id); if (!e) return;
+    document.getElementById('event-modal-title').textContent = 'Editar Evento';
+    document.getElementById('event-id').value = e.id;
+    document.getElementById('event-title').value = e.title;
+    document.getElementById('event-type').value = e.event_type;
+    document.getElementById('event-color').value = e.color||'#6366f1';
+    document.getElementById('event-date').value = e.date;
+    document.getElementById('event-time').value = e.time||'';
+    document.getElementById('event-description').value = e.description||'';
+    document.getElementById('btn-delete-event').classList.remove('hidden');
+    document.getElementById('event-modal').classList.remove('hidden');
+}
+
+async function saveEvent(ev) {
+    ev.preventDefault(); const id = document.getElementById('event-id').value;
+    const body = { title:document.getElementById('event-title').value, event_type:document.getElementById('event-type').value, color:document.getElementById('event-color').value, date:document.getElementById('event-date').value, time:document.getElementById('event-time').value||null, description:document.getElementById('event-description').value };
+    if (id) { await fetch(`/api/calendar/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+    else { await fetch('/api/calendar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+    closeEventModal(); render(); showToast(id?'Evento atualizado!':'Evento criado!','success');
+}
+
+async function deleteEvent() {
+    const id = document.getElementById('event-id').value;
+    if (!id||!confirm('Excluir este evento?')) return;
+    await fetch(`/api/calendar/${id}`,{method:'DELETE'}); closeEventModal(); render(); showToast('Evento excluido','info');
+}
+
+init();
+</script>
+{% endblock %}

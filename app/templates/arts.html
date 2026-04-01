@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}Controle de Artes - Portal MKT{% endblock %}
+{% block page_title %}Controle de Artes (Terceirizado){% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div class="flex gap-2">
+        <button onclick="filterArts('')" class="art-filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-brand-500 text-white">Todos</button>
+        {% for s in statuses %}
+        <button onclick="filterArts('{{ s }}')" class="art-filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-surface-200 text-gray-600 hover:bg-surface-50">{{ s|title }}</button>
+        {% endfor %}
+    </div>
+    <button onclick="openArtModal()" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
+        <i class="bi bi-plus-lg"></i> Novo Pedido
+    </button>
+</div>
+
+<!-- Pipeline Visual -->
+<div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+        <i class="bi bi-send text-amber-500 text-2xl"></i>
+        <p class="text-2xl font-bold text-amber-600 mt-2" id="count-enviado">0</p>
+        <p class="text-sm text-amber-600">Enviado</p>
+    </div>
+    <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
+        <i class="bi bi-gear text-blue-500 text-2xl"></i>
+        <p class="text-2xl font-bold text-blue-600 mt-2" id="count-andamento">0</p>
+        <p class="text-sm text-blue-600">Em Andamento</p>
+    </div>
+    <div class="bg-purple-50 border border-purple-200 rounded-2xl p-4 text-center">
+        <i class="bi bi-eye text-purple-500 text-2xl"></i>
+        <p class="text-2xl font-bold text-purple-600 mt-2" id="count-revisao">0</p>
+        <p class="text-sm text-purple-600">Revisao</p>
+    </div>
+    <div class="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+        <i class="bi bi-check-circle text-green-500 text-2xl"></i>
+        <p class="text-2xl font-bold text-green-600 mt-2" id="count-aprovado">0</p>
+        <p class="text-sm text-green-600">Aprovado</p>
+    </div>
+</div>
+
+<div id="arts-list" class="space-y-3"></div>
+
+<!-- Modal -->
+<div id="art-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-surface-100 flex items-center justify-between">
+            <h3 id="art-modal-title" class="text-lg font-bold text-gray-800">Novo Pedido de Arte</h3>
+            <button onclick="closeArtModal()" class="p-1 rounded-lg hover:bg-surface-100"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form id="art-form" onsubmit="saveArt(event)" class="p-6 space-y-4">
+            <input type="hidden" id="art-id" value="">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Titulo</label>
+                <input type="text" id="art-title" required class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descricao detalhada</label>
+                <textarea id="art-description" rows="4" required class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Referencias</label>
+                <textarea id="art-references" rows="2" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500" placeholder="Links ou descricao de referencias visuais"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Formato</label>
+                    <select id="art-format" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                        {% for f in format_types %}<option value="{{ f }}">{{ f|title }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dimensoes</label>
+                    <input type="text" id="art-dimensions" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500" placeholder="1080x1080">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prazo</label>
+                    <input type="date" id="art-deadline" required class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Designer</label>
+                    <input type="text" id="art-designer" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500" placeholder="Nome do designer">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select id="art-status" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                    {% for s in statuses %}<option value="{{ s }}">{{ s|title }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
+                <textarea id="art-feedback" rows="2" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500" placeholder="Feedback sobre a arte"></textarea>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded-xl text-sm font-medium transition">Salvar</button>
+                <button type="button" onclick="closeArtModal()" class="px-6 py-2.5 border border-surface-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-surface-50">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Image Upload Modal -->
+<div id="upload-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div class="p-6 border-b border-surface-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-800">Upload de Imagem</h3>
+            <button onclick="closeUploadModal()" class="p-1 rounded-lg hover:bg-surface-100"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="p-6">
+            <input type="hidden" id="upload-art-id">
+            <!-- Current image preview -->
+            <div id="current-image-container" class="hidden mb-4">
+                <p class="text-sm font-medium text-gray-700 mb-2">Imagem atual:</p>
+                <div class="relative inline-block">
+                    <img id="current-image-preview" src="" class="max-h-48 rounded-xl border border-surface-200">
+                    <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-red-600 shadow"><i class="bi bi-x"></i></button>
+                </div>
+            </div>
+            <!-- Upload area -->
+            <div id="upload-dropzone" class="border-2 border-dashed border-surface-300 rounded-xl p-8 text-center hover:border-brand-400 transition cursor-pointer" onclick="document.getElementById('file-input').click()">
+                <i class="bi bi-cloud-arrow-up text-4xl text-surface-300"></i>
+                <p class="text-sm text-gray-500 mt-2">Clique ou arraste uma imagem</p>
+                <p class="text-xs text-gray-400 mt-1">PNG, JPG, GIF, WebP</p>
+                <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.gif,.webp" class="hidden" onchange="handleFileSelect(this)">
+            </div>
+            <!-- Preview of selected file -->
+            <div id="selected-preview" class="hidden mt-4">
+                <img id="selected-image" src="" class="max-h-48 rounded-xl border border-surface-200 mx-auto">
+                <p id="selected-filename" class="text-xs text-gray-500 text-center mt-2"></p>
+            </div>
+            <button onclick="uploadImage()" id="upload-btn" class="w-full mt-4 bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <i class="bi bi-upload"></i> Enviar Imagem
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Viewer Modal -->
+<div id="viewer-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 cursor-pointer" onclick="this.classList.add('hidden')">
+    <img id="viewer-image" src="" class="max-w-full max-h-full rounded-xl shadow-2xl">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const artStatusColors = { enviado:'amber', andamento:'blue', revisao:'purple', aprovado:'green' };
+const artStatusIcons = { enviado:'bi-send', andamento:'bi-gear', revisao:'bi-eye', aprovado:'bi-check-circle' };
+
+function artRow(a) {
+    const color = artStatusColors[a.status] || 'gray';
+    const overdue = a.deadline && new Date(a.deadline) < new Date() && a.status !== 'aprovado';
+    return `
+    <div class="bg-white rounded-xl border ${overdue ? 'border-red-300' : 'border-surface-200'} p-5 hover:shadow-md transition">
+        <div class="flex items-start gap-4">
+            ${a.image_path
+                ? `<div class="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border border-surface-200 cursor-pointer" onclick="viewImage('${a.image_path}')">
+                       <img src="${a.image_path}" class="w-full h-full object-cover hover:scale-110 transition">
+                   </div>`
+                : `<div class="w-20 h-20 bg-surface-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                       <i class="bi bi-image text-2xl text-surface-300"></i>
+                   </div>`
+            }
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h4 class="font-bold text-gray-800">${a.title}</h4>
+                        <p class="text-sm text-gray-500 mt-1 line-clamp-2">${a.description}</p>
+                    </div>
+                    <div class="flex gap-1 flex-shrink-0 ml-4">
+                        <button onclick="openUploadModal(${a.id}, '${a.image_path||''}')" class="p-2 rounded-lg hover:bg-surface-100" title="Upload imagem"><i class="bi bi-image text-brand-500"></i></button>
+                        <button onclick="editArt(${a.id})" class="p-2 rounded-lg hover:bg-surface-100"><i class="bi bi-pencil text-gray-400"></i></button>
+                        <button onclick="deleteArt(${a.id})" class="p-2 rounded-lg hover:bg-red-50"><i class="bi bi-trash text-red-400"></i></button>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 mt-3">
+                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-${color}-100 text-${color}-600 px-2.5 py-1 rounded-full">
+                        <i class="bi ${artStatusIcons[a.status]}"></i> ${a.status}
+                    </span>
+                    ${a.format_type ? `<span class="text-xs text-gray-500 bg-surface-100 px-2 py-1 rounded-full">${a.format_type}</span>` : ''}
+                    ${a.dimensions ? `<span class="text-xs text-gray-500">${a.dimensions}</span>` : ''}
+                    ${a.designer_name ? `<span class="text-xs text-gray-500"><i class="bi bi-person"></i> ${a.designer_name}</span>` : ''}
+                    <span class="text-xs ${overdue ? 'text-red-500 font-medium' : 'text-gray-400'}"><i class="bi bi-calendar3"></i> ${a.deadline ? new Date(a.deadline).toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
+                </div>
+                ${a.feedback ? `<div class="mt-2 p-2 bg-amber-50 rounded-lg text-xs text-amber-700"><i class="bi bi-chat-dots"></i> ${a.feedback}</div>` : ''}
+            </div>
+        </div>
+        <div class="mt-4 flex gap-2">
+            ${['enviado','andamento','revisao','aprovado'].map(s => `<button onclick="updateArtStatus(${a.id},'${s}')" class="flex-1 text-xs py-1.5 rounded-lg ${a.status===s ? 'bg-'+artStatusColors[s]+'-500 text-white' : 'bg-surface-50 border border-surface-200 text-gray-500 hover:bg-surface-100'} transition">${s}</button>`).join('')}
+        </div>
+    </div>`;
+}
+
+let artFilter = '';
+async function loadArts() {
+    const url = artFilter ? `/api/arts?status=${artFilter}` : '/api/arts';
+    const res = await fetch(url);
+    const arts = await res.json();
+    document.getElementById('arts-list').innerHTML = arts.length ? arts.map(artRow).join('') : '<div class="text-center py-12 text-gray-400"><i class="bi bi-palette text-4xl block mb-2"></i>Nenhum pedido de arte</div>';
+
+    const allRes = await fetch('/api/arts');
+    const allArts = await allRes.json();
+    ['enviado','andamento','revisao','aprovado'].forEach(s => {
+        document.getElementById(`count-${s}`).textContent = allArts.filter(a => a.status === s).length;
+    });
+}
+
+function filterArts(status) {
+    artFilter = status;
+    document.querySelectorAll('.art-filter-btn').forEach(b => { b.className = b.className.replace('bg-brand-500 text-white','bg-white border border-surface-200 text-gray-600 hover:bg-surface-50'); });
+    event.target.className = event.target.className.replace('bg-white border border-surface-200 text-gray-600 hover:bg-surface-50','bg-brand-500 text-white');
+    loadArts();
+}
+
+function openArtModal() { document.getElementById('art-modal-title').textContent='Novo Pedido de Arte'; document.getElementById('art-form').reset(); document.getElementById('art-id').value=''; document.getElementById('art-modal').classList.remove('hidden'); }
+function closeArtModal() { document.getElementById('art-modal').classList.add('hidden'); }
+
+async function editArt(id) {
+    const res = await fetch('/api/arts');
+    const items = await res.json();
+    const a = items.find(i => i.id === id);
+    if (!a) return;
+    document.getElementById('art-modal-title').textContent = 'Editar Pedido';
+    document.getElementById('art-id').value = a.id;
+    document.getElementById('art-title').value = a.title;
+    document.getElementById('art-description').value = a.description;
+    document.getElementById('art-references').value = a.references || '';
+    document.getElementById('art-format').value = a.format_type || 'feed';
+    document.getElementById('art-dimensions').value = a.dimensions || '';
+    document.getElementById('art-deadline').value = a.deadline || '';
+    document.getElementById('art-designer').value = a.designer_name || '';
+    document.getElementById('art-status').value = a.status;
+    document.getElementById('art-feedback').value = a.feedback || '';
+    document.getElementById('art-modal').classList.remove('hidden');
+}
+
+async function saveArt(e) {
+    e.preventDefault();
+    const id = document.getElementById('art-id').value;
+    const body = { title: document.getElementById('art-title').value, description: document.getElementById('art-description').value, references: document.getElementById('art-references').value, format_type: document.getElementById('art-format').value, dimensions: document.getElementById('art-dimensions').value, deadline: document.getElementById('art-deadline').value, designer_name: document.getElementById('art-designer').value, status: document.getElementById('art-status').value, feedback: document.getElementById('art-feedback').value };
+    if (id) { await fetch(`/api/arts/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+    else { await fetch('/api/arts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+    closeArtModal(); loadArts();
+}
+
+async function deleteArt(id) { if(!confirm('Excluir este pedido?'))return; await fetch(`/api/arts/${id}`,{method:'DELETE'}); loadArts(); }
+async function updateArtStatus(id, status) { await fetch(`/api/arts/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}); loadArts(); }
+
+// === Image Upload ===
+let selectedFile = null;
+
+function openUploadModal(artId, currentImagePath) {
+    document.getElementById('upload-art-id').value = artId;
+    selectedFile = null;
+    document.getElementById('file-input').value = '';
+    document.getElementById('selected-preview').classList.add('hidden');
+    document.getElementById('upload-btn').disabled = true;
+
+    if (currentImagePath) {
+        document.getElementById('current-image-preview').src = currentImagePath;
+        document.getElementById('current-image-container').classList.remove('hidden');
+    } else {
+        document.getElementById('current-image-container').classList.add('hidden');
+    }
+    document.getElementById('upload-modal').classList.remove('hidden');
+}
+
+function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); }
+
+function handleFileSelect(input) {
+    if (input.files && input.files[0]) {
+        selectedFile = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('selected-image').src = e.target.result;
+            document.getElementById('selected-filename').textContent = selectedFile.name;
+            document.getElementById('selected-preview').classList.remove('hidden');
+            document.getElementById('upload-btn').disabled = false;
+        };
+        reader.readAsDataURL(selectedFile);
+    }
+}
+
+// Drag and drop
+const dropzone = document.getElementById('upload-dropzone');
+if (dropzone) {
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('border-brand-500','bg-brand-50'); });
+    dropzone.addEventListener('dragleave', e => { e.preventDefault(); dropzone.classList.remove('border-brand-500','bg-brand-50'); });
+    dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropzone.classList.remove('border-brand-500','bg-brand-50');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            document.getElementById('file-input').files = e.dataTransfer.files;
+            handleFileSelect(document.getElementById('file-input'));
+        }
+    });
+}
+
+async function uploadImage() {
+    if (!selectedFile) return;
+    const artId = document.getElementById('upload-art-id').value;
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    const btn = document.getElementById('upload-btn');
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando...';
+    btn.disabled = true;
+
+    const res = await fetch(`/api/arts/${artId}/upload`, { method: 'POST', body: formData });
+    const data = await res.json();
+
+    btn.innerHTML = '<i class="bi bi-upload"></i> Enviar Imagem';
+
+    if (data.error) {
+        alert(data.error);
+        btn.disabled = false;
+    } else {
+        closeUploadModal();
+        loadArts();
+    }
+}
+
+async function removeImage() {
+    const artId = document.getElementById('upload-art-id').value;
+    if (!confirm('Remover a imagem?')) return;
+    await fetch(`/api/arts/${artId}/image`, { method: 'DELETE' });
+    closeUploadModal();
+    loadArts();
+}
+
+function viewImage(src) {
+    document.getElementById('viewer-image').src = src;
+    document.getElementById('viewer-modal').classList.remove('hidden');
+}
+
+loadArts();
+</script>
+{% endblock %}

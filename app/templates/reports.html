@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Relatorios - Portal MKT{% endblock %}
+{% block page_title %}Relatorios e Metricas{% endblock %}
+
+{% block content %}
+<!-- Actions Bar -->
+<div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+        <select id="report-campaign" onchange="loadReportData()" class="border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+            <option value="">Todas as campanhas</option>
+            {% for c in campaigns %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </select>
+        <select id="report-period" onchange="loadReportData()" class="border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+            <option value="7">Ultimos 7 dias</option>
+            <option value="30" selected>Ultimos 30 dias</option>
+            <option value="90">Ultimos 90 dias</option>
+        </select>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="exportCSV()" class="bg-white border border-surface-200 text-gray-600 hover:bg-surface-50 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition">
+            <i class="bi bi-download"></i> Exportar CSV
+        </button>
+        <button onclick="openMetricModal()" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
+            <i class="bi bi-plus-lg"></i> Adicionar Metrica
+        </button>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-4 text-center">
+        <i class="bi bi-eye text-blue-500 text-xl"></i>
+        <p class="text-2xl font-bold text-gray-800 mt-1" id="kpi-views">0</p>
+        <p class="text-xs text-gray-500">Visualizacoes</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-4 text-center">
+        <i class="bi bi-hand-index text-green-500 text-xl"></i>
+        <p class="text-2xl font-bold text-gray-800 mt-1" id="kpi-clicks">0</p>
+        <p class="text-xs text-gray-500">Cliques</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-4 text-center">
+        <i class="bi bi-people text-amber-500 text-xl"></i>
+        <p class="text-2xl font-bold text-gray-800 mt-1" id="kpi-leads">0</p>
+        <p class="text-xs text-gray-500">Leads</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-4 text-center">
+        <i class="bi bi-trophy text-purple-500 text-xl"></i>
+        <p class="text-2xl font-bold text-gray-800 mt-1" id="kpi-conversions">0</p>
+        <p class="text-xs text-gray-500">Conversoes</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-4 text-center">
+        <i class="bi bi-binoculars text-cyan-500 text-xl"></i>
+        <p class="text-2xl font-bold text-gray-800 mt-1" id="kpi-impressions">0</p>
+        <p class="text-xs text-gray-500">Impressoes</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-4 text-center">
+        <i class="bi bi-cash text-red-500 text-xl"></i>
+        <p class="text-2xl font-bold text-gray-800 mt-1" id="kpi-spend">R$ 0</p>
+        <p class="text-xs text-gray-500">Investimento</p>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-6">
+        <h3 class="font-bold text-gray-800 mb-4">Crescimento Diario</h3>
+        <canvas id="reportLineChart" height="250"></canvas>
+    </div>
+    <div class="bg-white rounded-2xl border border-surface-200 shadow-sm p-6">
+        <h3 class="font-bold text-gray-800 mb-4">Comparacao de Campanhas</h3>
+        <canvas id="reportBarChart" height="250"></canvas>
+    </div>
+</div>
+
+<!-- Metrics Table -->
+<div class="bg-white rounded-2xl border border-surface-200 shadow-sm overflow-hidden">
+    <div class="p-5 border-b border-surface-100">
+        <h3 class="font-bold text-gray-800">Detalhamento</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-surface-50">
+                <tr>
+                    <th class="text-left px-5 py-3 font-medium text-gray-500">Data</th>
+                    <th class="text-right px-5 py-3 font-medium text-gray-500">Visualizacoes</th>
+                    <th class="text-right px-5 py-3 font-medium text-gray-500">Cliques</th>
+                    <th class="text-right px-5 py-3 font-medium text-gray-500">CTR</th>
+                    <th class="text-right px-5 py-3 font-medium text-gray-500">Leads</th>
+                    <th class="text-right px-5 py-3 font-medium text-gray-500">Conversoes</th>
+                    <th class="text-right px-5 py-3 font-medium text-gray-500">Investimento</th>
+                </tr>
+            </thead>
+            <tbody id="metrics-tbody" class="divide-y divide-surface-100"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Metric Modal -->
+<div id="metric-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+        <div class="p-6 border-b border-surface-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-800">Adicionar Metrica</h3>
+            <button onclick="closeMetricModal()" class="p-1 rounded-lg hover:bg-surface-100"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form id="metric-form" onsubmit="saveMetric(event)" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                    <input type="date" id="metric-date" required class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Campanha</label>
+                    <select id="metric-campaign" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                        <option value="">Geral</option>
+                        {% for c in campaigns %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Visualizacoes</label>
+                    <input type="number" id="metric-views" value="0" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cliques</label>
+                    <input type="number" id="metric-clicks" value="0" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Impressoes</label>
+                    <input type="number" id="metric-impressions" value="0" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Leads</label>
+                    <input type="number" id="metric-leads" value="0" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Conversoes</label>
+                    <input type="number" id="metric-conversions" value="0" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Investimento (R$)</label>
+                    <input type="number" id="metric-spend" step="0.01" value="0" class="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded-xl text-sm font-medium transition">Salvar Metrica</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let lineChart, barChart;
+
+async function loadReportData() {
+    const campaign = document.getElementById('report-campaign').value;
+    const days = document.getElementById('report-period').value;
+
+    const metricsUrl = campaign ? `/api/metrics?campaign_id=${campaign}` : '/api/metrics';
+    const [metricsRes, comparisonRes] = await Promise.all([
+        fetch(metricsUrl),
+        fetch('/api/dashboard/campaign-comparison')
+    ]);
+    const metrics = await metricsRes.json();
+    const comparison = await comparisonRes.json();
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - parseInt(days));
+    const filtered = metrics.filter(m => new Date(m.date) >= cutoff);
+
+    let totalViews=0, totalClicks=0, totalLeads=0, totalConversions=0, totalImpressions=0, totalSpend=0;
+    filtered.forEach(m => { totalViews+=m.views; totalClicks+=m.clicks; totalLeads+=m.leads; totalConversions+=m.conversions; totalImpressions+=m.impressions; totalSpend+=m.spend; });
+
+    document.getElementById('kpi-views').textContent = totalViews.toLocaleString('pt-BR');
+    document.getElementById('kpi-clicks').textContent = totalClicks.toLocaleString('pt-BR');
+    document.getElementById('kpi-leads').textContent = totalLeads.toLocaleString('pt-BR');
+    document.getElementById('kpi-conversions').textContent = totalConversions.toLocaleString('pt-BR');
+    document.getElementById('kpi-impressions').textContent = totalImpressions.toLocaleString('pt-BR');
+    document.getElementById('kpi-spend').textContent = `R$ ${totalSpend.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+
+    // Line chart
+    const byDate = {};
+    filtered.forEach(m => {
+        if (!byDate[m.date]) byDate[m.date] = {views:0,clicks:0,leads:0,conversions:0};
+        byDate[m.date].views += m.views;
+        byDate[m.date].clicks += m.clicks;
+        byDate[m.date].leads += m.leads;
+        byDate[m.date].conversions += m.conversions;
+    });
+    const sortedDates = Object.keys(byDate).sort();
+
+    if (lineChart) lineChart.destroy();
+    lineChart = new Chart(document.getElementById('reportLineChart'), {
+        type: 'line',
+        data: {
+            labels: sortedDates.map(d => new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})),
+            datasets: [
+                { label:'Visualizacoes', data:sortedDates.map(d=>byDate[d].views), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.1)', fill:true, tension:0.4 },
+                { label:'Cliques', data:sortedDates.map(d=>byDate[d].clicks), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.1)', fill:true, tension:0.4 },
+                { label:'Leads', data:sortedDates.map(d=>byDate[d].leads), borderColor:'#f59e0b', tension:0.4 },
+                { label:'Conversoes', data:sortedDates.map(d=>byDate[d].conversions), borderColor:'#8b5cf6', tension:0.4 },
+            ]
+        },
+        options: { responsive:true, plugins:{legend:{position:'bottom',labels:{usePointStyle:true}}}, scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}, interaction:{intersect:false,mode:'index'} }
+    });
+
+    // Bar chart
+    if (barChart) barChart.destroy();
+    if (comparison.length > 0) {
+        barChart = new Chart(document.getElementById('reportBarChart'), {
+            type: 'bar',
+            data: {
+                labels: comparison.map(c=>c.name),
+                datasets: [
+                    { label:'Visualizacoes', data:comparison.map(c=>c.views), backgroundColor:'#3b82f6' },
+                    { label:'Cliques', data:comparison.map(c=>c.clicks), backgroundColor:'#22c55e' },
+                    { label:'Leads', data:comparison.map(c=>c.leads), backgroundColor:'#f59e0b' },
+                    { label:'Conversoes', data:comparison.map(c=>c.conversions), backgroundColor:'#8b5cf6' },
+                ]
+            },
+            options: { responsive:true, plugins:{legend:{position:'bottom',labels:{usePointStyle:true}}}, scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}},x:{grid:{display:false}}} }
+        });
+    }
+
+    // Table
+    const tbody = document.getElementById('metrics-tbody');
+    tbody.innerHTML = filtered.slice(0,50).map(m => {
+        const ctr = m.views > 0 ? ((m.clicks/m.views)*100).toFixed(2) : '0.00';
+        return `<tr class="hover:bg-surface-50">
+            <td class="px-5 py-3 text-gray-700">${new Date(m.date).toLocaleDateString('pt-BR')}</td>
+            <td class="px-5 py-3 text-right text-gray-700">${m.views.toLocaleString('pt-BR')}</td>
+            <td class="px-5 py-3 text-right text-gray-700">${m.clicks.toLocaleString('pt-BR')}</td>
+            <td class="px-5 py-3 text-right text-gray-700">${ctr}%</td>
+            <td class="px-5 py-3 text-right text-gray-700">${m.leads.toLocaleString('pt-BR')}</td>
+            <td class="px-5 py-3 text-right text-gray-700">${m.conversions.toLocaleString('pt-BR')}</td>
+            <td class="px-5 py-3 text-right text-gray-700">R$ ${m.spend.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+        </tr>`;
+    }).join('');
+}
+
+function openMetricModal() { document.getElementById('metric-form').reset(); document.getElementById('metric-date').value = new Date().toISOString().split('T')[0]; document.getElementById('metric-modal').classList.remove('hidden'); }
+function closeMetricModal() { document.getElementById('metric-modal').classList.add('hidden'); }
+
+async function saveMetric(e) {
+    e.preventDefault();
+    await fetch('/api/metrics', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+        date: document.getElementById('metric-date').value,
+        campaign_id: document.getElementById('metric-campaign').value || null,
+        views: parseInt(document.getElementById('metric-views').value) || 0,
+        clicks: parseInt(document.getElementById('metric-clicks').value) || 0,
+        impressions: parseInt(document.getElementById('metric-impressions').value) || 0,
+        leads: parseInt(document.getElementById('metric-leads').value) || 0,
+        conversions: parseInt(document.getElementById('metric-conversions').value) || 0,
+        spend: parseFloat(document.getElementById('metric-spend').value) || 0,
+    })});
+    closeMetricModal(); loadReportData();
+}
+
+function exportCSV() {
+    const campaign = document.getElementById('report-campaign').value;
+    const days = document.getElementById('report-period').value;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(days));
+    let url = `/api/metrics/export?start_date=${cutoff.toISOString().split('T')[0]}`;
+    if (campaign) url += `&campaign_id=${campaign}`;
+    window.open(url, '_blank');
+}
+
+loadReportData();
+</script>
+{% endblock %}

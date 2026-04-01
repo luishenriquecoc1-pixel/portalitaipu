@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Portal MKT{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-surface-200 dark:border-gray-800 shadow-sm card-hover animate-fadeInUp">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                <i class="bi bi-file-earmark-text text-blue-600 dark:text-blue-400 text-xl"></i>
+            </div>
+            <span class="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">Total</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white" data-counter="{{ total_contents }}">{{ total_contents }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Conteudos</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-surface-200 dark:border-gray-800 shadow-sm card-hover animate-fadeInUp stagger-1">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                <i class="bi bi-gear-fill text-amber-600 dark:text-amber-400 text-xl"></i>
+            </div>
+            <span class="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-full">Ativo</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white" data-counter="{{ in_production }}">{{ in_production }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Em Producao</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-surface-200 dark:border-gray-800 shadow-sm card-hover animate-fadeInUp stagger-2">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                <i class="bi bi-check-circle-fill text-green-600 dark:text-green-400 text-xl"></i>
+            </div>
+            <span class="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">Feito</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white" data-counter="{{ posted }}">{{ posted }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Postados</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-surface-200 dark:border-gray-800 shadow-sm card-hover animate-fadeInUp stagger-3">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                <i class="bi bi-megaphone-fill text-purple-600 dark:text-purple-400 text-xl"></i>
+            </div>
+            <span class="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">Ativas</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white" data-counter="{{ active_campaigns }}">{{ active_campaigns }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Campanhas</p>
+    </div>
+</div>
+
+<!-- Alerts Banner -->
+{% if overdue_contents > 0 or overdue_arts > 0 %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 mb-6 flex items-center gap-3 animate-fadeInUp stagger-4">
+    <i class="bi bi-exclamation-triangle-fill text-red-500 text-xl"></i>
+    <div>
+        <p class="font-semibold text-red-700 dark:text-red-400">Atencao!</p>
+        <p class="text-sm text-red-600 dark:text-red-300">
+            {% if overdue_contents > 0 %}{{ overdue_contents }} conteudo(s) atrasado(s){% endif %}
+            {% if overdue_contents > 0 and overdue_arts > 0 %} e {% endif %}
+            {% if overdue_arts > 0 %}{{ overdue_arts }} arte(s) nao entregue(s){% endif %}
+        </p>
+    </div>
+    <a href="/alertas" class="ml-auto text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 underline">Ver alertas</a>
+</div>
+{% endif %}
+
+<!-- Productivity Chart + Events -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl p-6 border border-surface-200 dark:border-gray-800 shadow-sm animate-fadeInUp stagger-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <i class="bi bi-graph-up text-brand-500"></i> Produtividade Semanal
+            </h3>
+            <a href="/api/reports/pdf?month={{ now().month if now is defined else 4 }}&year={{ now().year if now is defined else 2026 }}" class="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 bg-brand-50 dark:bg-brand-900/20 px-3 py-1.5 rounded-lg transition-colors" download>
+                <i class="bi bi-download"></i> Relatorio PDF
+            </a>
+        </div>
+        <canvas id="productivityChart" height="200"></canvas>
+    </div>
+
+    <div class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-surface-200 dark:border-gray-800 shadow-sm animate-fadeInUp stagger-5">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+            <i class="bi bi-calendar3 text-brand-500"></i> Proximos Eventos
+        </h3>
+        <div class="space-y-3">
+            {% for event in upcoming_events %}
+            <div class="flex items-start gap-3 p-3 rounded-xl bg-surface-50 dark:bg-gray-800">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 leading-tight" style="background-color: {{ event.color }}">
+                    {{ event.date.strftime('%d') }}<br>{{ event.date.strftime('%b') }}
+                </div>
+                <div>
+                    <p class="font-medium text-sm text-gray-800 dark:text-white">{{ event.title }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ event.time or 'Dia todo' }} &middot; {{ event.event_type }}</p>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not upcoming_events %}
+            <p class="text-sm text-gray-400 text-center py-4">Nenhum evento proximo</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Status Cards + Content by Type -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="space-y-4 animate-fadeInUp stagger-5">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-surface-200 dark:border-gray-800 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-pink-100 dark:bg-pink-900/30 rounded-xl flex items-center justify-center"><i class="bi bi-palette-fill text-pink-500 text-lg"></i></div>
+                    <div><p class="font-bold text-gray-800 dark:text-white">{{ pending_arts }}</p><p class="text-xs text-gray-500 dark:text-gray-400">Artes Pendentes</p></div>
+                </div>
+                <a href="/artes" class="text-sm text-brand-600 hover:text-brand-700 font-medium">&rarr;</a>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-surface-200 dark:border-gray-800 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center"><i class="bi bi-camera-video-fill text-blue-500 text-lg"></i></div>
+                    <div><p class="font-bold text-gray-800 dark:text-white">{{ pending_videos }}</p><p class="text-xs text-gray-500 dark:text-gray-400">Videos em Producao</p></div>
+                </div>
+                <a href="/videos" class="text-sm text-brand-600 hover:text-brand-700 font-medium">&rarr;</a>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-surface-200 dark:border-gray-800 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center"><i class="bi bi-lightbulb-fill text-amber-500 text-lg"></i></div>
+                    <div><p class="font-bold text-gray-800 dark:text-white">{{ total_ideas }}</p><p class="text-xs text-gray-500 dark:text-gray-400">Ideias no Banco</p></div>
+                </div>
+                <a href="/ideias" class="text-sm text-brand-600 hover:text-brand-700 font-medium">&rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content by Type -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-surface-200 dark:border-gray-800 shadow-sm animate-fadeInUp stagger-6">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+            <i class="bi bi-pie-chart-fill text-brand-500"></i> Por Tipo
+        </h3>
+        <canvas id="contentTypeChart" height="220"></canvas>
+    </div>
+
+    <!-- Completion Rate -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-surface-200 dark:border-gray-800 shadow-sm animate-fadeInUp stagger-7">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+            <i class="bi bi-speedometer2 text-brand-500"></i> Taxa de Conclusao
+        </h3>
+        <div id="completion-rate" class="flex flex-col items-center justify-center h-[200px]">
+            <div class="text-5xl font-bold text-brand-500" id="rate-number">0%</div>
+            <p class="text-sm text-gray-400 mt-2">dos conteudos criados foram postados</p>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-surface-200 dark:border-gray-800 shadow-sm animate-fadeInUp stagger-8">
+    <h3 class="font-bold text-gray-800 dark:text-white mb-4">Atividade Recente</h3>
+    <div class="divide-y divide-surface-100 dark:divide-gray-800">
+        {% for c in recent_contents %}
+        <div class="py-3 flex items-center gap-4">
+            <div class="w-2 h-2 rounded-full flex-shrink-0
+                {% if c.status == 'ideia' %}bg-gray-400
+                {% elif c.status == 'producao' %}bg-amber-400
+                {% elif c.status == 'aprovacao' %}bg-blue-400
+                {% elif c.status == 'finalizado' %}bg-green-400
+                {% elif c.status == 'postado' %}bg-purple-400{% endif %}"></div>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm text-gray-800 dark:text-white truncate">{{ c.title }}</p>
+                <p class="text-xs text-gray-400">{{ c.content_type }} &middot; {{ c.status }}{% if c.is_favorite %} <i class="bi bi-star-fill text-amber-400"></i>{% endif %}</p>
+            </div>
+            <span class="text-xs text-gray-400">{{ c.updated_at.strftime('%d/%m %H:%M') if c.updated_at else '' }}</span>
+        </div>
+        {% endfor %}
+        {% if not recent_contents %}
+        <p class="text-sm text-gray-400 text-center py-4">Nenhuma atividade recente</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Content by Type chart
+const contentData = {{ contents_by_type | tojson }};
+const labels = Object.keys(contentData);
+const totals = labels.map(k => contentData[k].total);
+const colors = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#22c55e','#06b6d4','#f97316','#ef4444'];
+
+if (labels.length > 0) {
+    new Chart(document.getElementById('contentTypeChart'), {
+        type: 'doughnut',
+        data: {
+            labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+            datasets: [{ data: totals, backgroundColor: colors.slice(0, labels.length), borderWidth: 0, hoverOffset: 8 }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12, font: { size: 11 }, color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b' } } }, cutout: '65%' }
+    });
+}
+
+// Productivity chart
+fetch('/api/dashboard/productivity').then(r=>r.json()).then(data => {
+    document.getElementById('rate-number').textContent = data.completion_rate + '%';
+    const isDark = document.documentElement.classList.contains('dark');
+    new Chart(document.getElementById('productivityChart'), {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                { label: 'Criados', data: data.created, backgroundColor: '#818cf8', borderRadius: 6, barPercentage: 0.6 },
+                { label: 'Postados', data: data.posted, backgroundColor: '#22c55e', borderRadius: 6, barPercentage: 0.6 },
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, color: isDark ? '#94a3b8' : '#64748b' } } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: isDark ? '#1e293b' : '#f1f5f9' }, ticks: { color: isDark ? '#64748b' : '#94a3b8' } },
+                x: { grid: { display: false }, ticks: { color: isDark ? '#64748b' : '#94a3b8' } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
