@@ -42,7 +42,7 @@
 
 <!-- Content Modal -->
 <div id="content-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-scaleIn border dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scaleIn border dark:border-gray-700">
         <div class="p-6 border-b border-surface-100 dark:border-gray-700 flex items-center justify-between">
             <h3 id="content-modal-title" class="text-lg font-bold text-gray-800 dark:text-white">Novo Conteudo</h3>
             <button onclick="closeContentModal()" class="p-1 rounded-lg hover:bg-surface-100 dark:hover:bg-gray-800"><i class="bi bi-x-lg"></i></button>
@@ -123,7 +123,7 @@
                             <div class="w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center text-white text-xs font-bold">IT</div>
                             <div><p class="text-sm font-bold text-gray-800 dark:text-white">itaipu_internet</p><p class="text-[10px] text-gray-400">Patrocinado</p></div>
                         </div>
-                        <div id="preview-image" class="w-full h-[375px] bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center"><i class="bi bi-image text-6xl text-white/30"></i></div>
+                        <div id="preview-image" class="w-full h-[375px] bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center bg-cover bg-center"><i id="preview-image-icon" class="bi bi-image text-6xl text-white/30"></i></div>
                         <div class="p-3">
                             <div class="flex gap-3 mb-2"><i class="bi bi-heart text-xl"></i><i class="bi bi-chat text-xl"></i><i class="bi bi-send text-xl"></i><i class="bi bi-bookmark ml-auto text-xl"></i></div>
                             <p class="text-sm"><span class="font-bold">itaipu_internet</span> <span id="preview-text" class="text-gray-700 dark:text-gray-300"></span></p>
@@ -265,9 +265,25 @@ async function openDetail(id) {
     document.getElementById('detail-title').textContent = item.title;
     document.getElementById('detail-fav-btn').innerHTML = item.is_favorite ? '<i class="bi bi-star-fill text-amber-400"></i>' : '<i class="bi bi-star text-gray-400"></i>';
     document.getElementById('preview-text').textContent = item.description || 'Descricao do conteudo aqui...';
+    // Reset preview image
+    resetPreviewImage();
     showTab('checklist');
     loadChecklist(id); loadComments(id); loadAttachments(id);
     document.getElementById('detail-modal').classList.remove('hidden');
+}
+
+function resetPreviewImage() {
+    const el = document.getElementById('preview-image');
+    el.style.backgroundImage = '';
+    el.className = 'w-full h-[375px] bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center bg-cover bg-center';
+    document.getElementById('preview-image-icon').classList.remove('hidden');
+}
+
+function setPreviewImage(url) {
+    const el = document.getElementById('preview-image');
+    el.style.backgroundImage = `url(${url})`;
+    el.className = 'w-full h-[375px] bg-cover bg-center';
+    document.getElementById('preview-image-icon').classList.add('hidden');
 }
 function closeDetailModal() { document.getElementById('detail-modal').classList.add('hidden'); currentDetailId=null; }
 
@@ -301,7 +317,20 @@ async function addComment() { const input=document.getElementById('new-comment')
 // Attachments
 async function loadAttachments(id) {
     const res = await fetch(`/api/contents/${id}/attachments`); const items = await res.json();
-    document.getElementById('attachments-list').innerHTML = items.length ? items.map(a => `<div class="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-gray-800 group"><i class="bi bi-file-earmark text-xl text-gray-400"></i><div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">${a.filename}</p><p class="text-xs text-gray-400">${(a.file_size/1024).toFixed(1)} KB</p></div><a href="${a.file_path}" download class="text-brand-500 hover:text-brand-700 text-sm"><i class="bi bi-download"></i></a><button onclick="deleteAttachment(${a.id})" class="text-red-400 hover:text-red-600 text-sm opacity-0 group-hover:opacity-100"><i class="bi bi-trash"></i></button></div>`).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum anexo</p>';
+    document.getElementById('attachments-list').innerHTML = items.length ? items.map(a => {
+        const isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(a.filename);
+        const icon = isImg ? 'bi-image' : 'bi-file-earmark';
+        return `<div class="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-gray-800 group">
+            ${isImg ? `<img src="${a.file_path}" class="w-10 h-10 rounded-lg object-cover flex-shrink-0">` : `<i class="bi ${icon} text-xl text-gray-400"></i>`}
+            <div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">${a.filename}</p><p class="text-xs text-gray-400">${(a.file_size/1024).toFixed(1)} KB</p></div>
+            ${isImg ? `<button onclick="setPreviewImage('${a.file_path}')" class="text-brand-500 hover:text-brand-700 text-sm" title="Usar no preview"><i class="bi bi-phone"></i></button>` : ''}
+            <a href="${a.file_path}" download class="text-brand-500 hover:text-brand-700 text-sm"><i class="bi bi-download"></i></a>
+            <button onclick="deleteAttachment(${a.id})" class="text-red-400 hover:text-red-600 text-sm opacity-0 group-hover:opacity-100"><i class="bi bi-trash"></i></button></div>`;
+    }).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum anexo</p>';
+    // Auto-set first image as preview
+    const firstImg = items.find(a => /\.(png|jpg|jpeg|gif|webp)$/i.test(a.filename));
+    if (firstImg) setPreviewImage(firstImg.file_path);
+    else resetPreviewImage();
 }
 async function uploadAttachment(input) { if(!input.files[0]) return; const fd=new FormData(); fd.append('file',input.files[0]); await fetch(`/api/contents/${currentDetailId}/attachments`,{method:'POST',body:fd}); input.value=''; loadAttachments(currentDetailId); showToast('Arquivo anexado!','success'); }
 async function deleteAttachment(id) { if(!confirm('Remover anexo?'))return; await fetch(`/api/attachments/${id}`,{method:'DELETE'}); loadAttachments(currentDetailId); }
