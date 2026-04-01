@@ -4,6 +4,21 @@
    Surface: Slate tones
    ========================================================================== */
 
+/* Modal: form inside flex-col modal scrolls, header/footer stay fixed */
+[class*="max-h-[90vh]"] > form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+}
+[class*="max-h-[90vh]"] > form > div:first-child,
+[class*="max-h-[90vh]"] > form > .p-5:first-child,
+[class*="max-h-[90vh]"] > form > .p-6:first-child {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
 /* --------------------------------------------------------------------------
    CSS Custom Properties
    -------------------------------------------------------------------------- */
