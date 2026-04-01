@@ -17,6 +17,13 @@ app = FastAPI(title="Portal MKT - Gestao de Marketing", version="2.0.0")
 os.makedirs("app/static/uploads/arts", exist_ok=True)
 os.makedirs("app/static/uploads/attachments", exist_ok=True)
 
+# Auto-create tables and seed admin on startup
+from app.database import engine, Base
+from app.models import *
+from app.seed import seed_admin
+Base.metadata.create_all(bind=engine)
+seed_admin()
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Core routes
